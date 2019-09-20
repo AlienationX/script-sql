@@ -120,7 +120,7 @@ select date,
             end as week_cn,
        date_sub(date,pmod(datediff(date,'1900-01-01'),7)) as week_start_date,
        date_add(date,6-pmod(datediff(date,'1900-01-01'),7)) as week_end_date
-  from (select date_add('$start_date',a.num+b.num+c.num+d.num+f.num) as date
+  from (select date_add('$start_date',a.num+b.num+c.num+d.num+e.num) as date
         from (
                 select 0 as num union all
                 select 1 as num union all
@@ -180,7 +180,7 @@ select date,
                 select 7*10000 as num union all
                 select 8*10000 as num union all
                 select 9*10000 as num 
-            ) f
+            ) e
        ) t
 where date>='$start_date' and date<='$end_date'
 order by date
