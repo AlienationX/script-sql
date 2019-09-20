@@ -1,42 +1,52 @@
 #!/bin/bash
 
-#  create table dim_date (
-#   `date` char(10) DEFAULT NULL COMMENT 'yyyy-mm-dd',
-#   `date_dt` datetime DEFAULT NULL COMMENT 'datetime type',
-#   `date_str` char(10) DEFAULT NULL COMMENT 'yyyy/mm/dd',
-#   `date_cn` char(10) DEFAULT NULL COMMENT 'yyyy年mm月dd日',
-#   `year_month` char(6) DEFAULT NULL COMMENT 'yyyymm',
-#   `year_month_cn` char(8) DEFAULT NULL COMMENT 'yyyy年mm月',
-#   `year` char(4) DEFAULT NULL COMMENT 'yyyy',
-#   `month` char(2) DEFAULT NULL COMMENT 'mm',
-#   `month_int` int(11) DEFAULT NULL,
-#   `month_cn` char(3) DEFAULT NULL COMMENT 'mm月',
-#   `month_en` varchar(10) DEFAULT NULL COMMENT 'January',
-#   `month_en_short` varchar(10) DEFAULT NULL COMMENT 'Jan',
-#   `quarter` int(11) DEFAULT NULL,
-#   `half_year` int(11) DEFAULT NULL,
-#   `half_year_cn` char(3) DEFAULT NULL COMMENT '上半年 or 下半年',
-#   `weekofyear` int(11) DEFAULT NULL,
-#   `weekofmonth_cn` char(3) DEFAULT NULL COMMENT '第1周、第2周',
-#   `dayofyear` int(11) DEFAULT NULL,
-#   `dayofmonth` int(11) DEFAULT NULL,
-#   `dayofweek` int(11) DEFAULT NULL,
-#   `week_en` varchar(10) DEFAULT NULL COMMENT 'Monday',
-#   `week_en_short` varchar(10) DEFAULT NULL COMMENT 'Mon',
-#   `week_cn` char(3) DEFAULT NULL COMMENT '星期一',
-#   `week_start_date` char(10) DEFAULT NULL COMMENT '周起始日期',
-#   `week_end_date` char(10) DEFAULT NULL COMMENT '周结束日期'
-# );
+# ==================================================================================
+# author:       shuli
+# create:       2019-09-18
+# table:        dim_date
+# description:  时间维度表，生成的日期天数最多为100000天
+# param:        开始日期，结束日期
+# return:       
+# ==================================================================================
 
 start_date=2000-01-01
-end_date=2020-12-31
+end_date=2030-12-31
 
-hive -e "
-set hive.execution.engine=spark;
+hive -v -e "
+create table if not exists medical.dim_date (
+    date                             string comment '日期：2010-01-01',
+    date_num                         string comment '日期：20100101',
+    date_str                         string comment '日期：2010/01/01',
+    date_cn                          string comment '日期：2010年01月01日',
+    year_month                       string comment '年月：201001',
+    year_month_cn                    string comment '年月：2010年01月',
+    year                             int    comment '年份：2010',
+    month                            string comment '月份：01',
+    month_int                        int    comment '月份：1',
+    month_cn                         string comment '月份：01月',
+    month_en                         string comment '月份：January',
+    month_en_short                   string comment '月份：Jan',
+    quarter                          string comment '季度：1',
+    half_year                        string comment '半年：1、2分别代表上半年和下半年',
+    weekofyear                       int    comment '本周所在年的第几周。注意跨年问题，系统函数，会承接上年的周',
+    weekofmonth_cn                   string comment '本周所在月的第几周。注意跨月问题，不承接上月的周，不建议使用',
+    dayofyear                        int    comment '本天所在年的第几天',
+    dayofmonth                       int    comment '本天所在月的第几天',
+    dayofweek                        int    comment '本天所在周的第几天',
+    week_en                          string comment '周：Monday,Tuesday...',
+    week_en_short                    string comment '周：MON,TUE...',
+    week_cn                          string comment '周：星期一,星期二...星期日',
+    week_start_date                  string comment '本周开始日期',
+    week_end_date                    string comment '本周结束日期'
+) 
+comment 'dim_时间维度表' 
+stored as parquet;
+
 set hive.mapred.mode=nonstrict;
-create table db.dim_date as
+
+insert overwrite table medical.dim_date
 select date,
-       to_date(date) as date_dt,
+       regexp_replace(date,'-','') as date_num,
        regexp_replace(date,'-','/') as date_str,
        concat(substr(date,1,4),'年',substr(date,6,2),'月',substr(date,9,2),'日') as date_cn,
        concat(substr(date,1,4),substr(date,6,2)) as year_month,
@@ -79,9 +89,6 @@ select date,
        case when substr(date,6,2) >= '01' and substr(date,6,2) <= '06' then 1 
             when substr(date,6,2) >= '07' and substr(date,6,2) <= '12' then 2 
             end as half_year,
-       case when substr(date,6,2) >= '01' and substr(date,6,2) <= '06' then '上半年' 
-            when substr(date,6,2) >= '07' and substr(date,6,2) <= '12' then '下半年' 
-            end as half_year_cn,
        weekofyear(date) as weekofyear,
        concat('第',floor(datediff(date,date_sub(concat(substr(date,1,7),'-01'),pmod(datediff(concat(substr(date,1,7),'-01'),'1900-01-01'),7)))/7)+1,'周') as weekofmonth_cn,
        datediff(date,concat(substr(date,1,4),'-01-01')) + 1 as dayofyear,
@@ -113,7 +120,7 @@ select date,
             end as week_cn,
        date_sub(date,pmod(datediff(date,'1900-01-01'),7)) as week_start_date,
        date_add(date,6-pmod(datediff(date,'1900-01-01'),7)) as week_end_date
-  from (select date_add('$start_date',a.num+b.num+c.num+d.num) as date
+  from (select date_add('$start_date',a.num+b.num+c.num+d.num+f.num) as date
         from (
                 select 0 as num union all
                 select 1 as num union all
@@ -161,8 +168,20 @@ select date,
                 select 7*1000 as num union all
                 select 8*1000 as num union all
                 select 9*1000 as num 
-            ) d
+            ) d,
+            (
+                select 0*10000 as num union all
+                select 1*10000 as num union all
+                select 2*10000 as num union all
+                select 3*10000 as num union all
+                select 4*10000 as num union all
+                select 5*10000 as num union all
+                select 6*10000 as num union all
+                select 7*10000 as num union all
+                select 8*10000 as num union all
+                select 9*10000 as num 
+            ) f
        ) t
- where date>='$start_date' and date<='$end_date'
- order by date
+where date>='$start_date' and date<='$end_date'
+order by date
 "
