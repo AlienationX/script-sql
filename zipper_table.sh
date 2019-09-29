@@ -15,7 +15,7 @@ else
     dt=$(date -d "-1 day" +"%Y-%m-%d")
 fi
 
-flag=$(hive -v -e "select count(1) from ods_orders limit 10")
+flag=$(hive -v -e "select 1 as num from ods_orders limit 1")
 
 # 全量处理sql
 hive -v -e "
