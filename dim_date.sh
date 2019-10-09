@@ -14,6 +14,7 @@ end_date=2030-12-31
 
 hive -v -e "
 create table if not exists medical.dim_date (
+    id                               int    comment 'ID',
     date                             string comment '日期：2010-01-01',
     date_num                         string comment '日期：20100101',
     date_str                         string comment '日期：2010/01/01',
@@ -26,8 +27,10 @@ create table if not exists medical.dim_date (
     month_cn                         string comment '月份：01月',
     month_en                         string comment '月份：January',
     month_en_short                   string comment '月份：Jan',
-    quarter                          string comment '季度：1',
+    quarter_int                      string comment '季度：1',
+    quarter_cn                       string comment '季度：2010年第一季度',
     half_year                        string comment '半年：1、2分别代表上半年和下半年',
+    half_year_cn                     string comment '半年：2010年上半年、2010年下半年',
     weekofyear                       int    comment '本周所在年的第几周。注意跨年问题，系统函数，会承接上年的周',
     weekofmonth_cn                   string comment '本周所在月的第几周。注意跨月问题，不承接上月的周，不建议使用',
     dayofyear                        int    comment '本天所在年的第几天',
@@ -45,7 +48,8 @@ stored as parquet;
 set hive.mapred.mode=nonstrict;
 
 insert overwrite table medical.dim_date
-select date,
+select row_number() over(order by date) as id,
+       date,
        regexp_replace(date,'-','') as date_num,
        regexp_replace(date,'-','/') as date_str,
        concat(substr(date,1,4),'年',substr(date,6,2),'月',substr(date,9,2),'日') as date_cn,
@@ -85,10 +89,18 @@ select date,
             when substr(date,6,2) >= '04' and substr(date,6,2) <= '06' then 2 
             when substr(date,6,2) >= '07' and substr(date,6,2) <= '09' then 3 
             when substr(date,6,2) >= '10' and substr(date,6,2) <= '12' then 4 
-            end as quarter,
+            end as quarter_int,
+       case when substr(date,6,2) >= '01' and substr(date,6,2) <= '03' then concat(substr(date,1,4),'年第一季度') 
+            when substr(date,6,2) >= '04' and substr(date,6,2) <= '06' then concat(substr(date,1,4),'年第二季度') 
+            when substr(date,6,2) >= '07' and substr(date,6,2) <= '09' then concat(substr(date,1,4),'年第三季度') 
+            when substr(date,6,2) >= '10' and substr(date,6,2) <= '12' then concat(substr(date,1,4),'年第四季度') 
+            end as quarter_cn,
        case when substr(date,6,2) >= '01' and substr(date,6,2) <= '06' then 1 
             when substr(date,6,2) >= '07' and substr(date,6,2) <= '12' then 2 
             end as half_year,
+       case when substr(date,6,2) >= '01' and substr(date,6,2) <= '06' then concat(substr(date,1,4),'年上半年') 
+            when substr(date,6,2) >= '07' and substr(date,6,2) <= '12' then concat(substr(date,1,4),'年下半年') 
+            end as half_year_cn,
        weekofyear(date) as weekofyear,
        concat('第',floor(datediff(date,date_sub(concat(substr(date,1,7),'-01'),pmod(datediff(concat(substr(date,1,7),'-01'),'1900-01-01'),7)))/7)+1,'周') as weekofmonth_cn,
        datediff(date,concat(substr(date,1,4),'-01-01')) + 1 as dayofyear,
