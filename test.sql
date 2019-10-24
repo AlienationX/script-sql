@@ -47,16 +47,19 @@ create table tmp.test_c (
 );
 insert overwrite table tmp.test_c select 3 as id union all select 4 as id union all select 5 as id;
 
+-- error
 select coalesce(a.id,b.id,c.id) as id,a.id as a_id,b.id as b_id,c.id as c_id
 from tmp.test_a a 
 full join tmp.test_b b on a.id=b.id
 full join tmp.test_c c on a.id=c.id;
 
+-- error
 select coalesce(a.id,b.id,c.id) as id,a.id as a_id,b.id as b_id,c.id as c_id
 from tmp.test_a a 
 full join tmp.test_b b on a.id=b.id
 full join tmp.test_c c on b.id=c.id;
 
+-- success
 select coalesce(a.id,b.id,c.id) as id,a.id as a_id,b.id as b_id,c.id as c_id
 from tmp.test_a a 
 full join tmp.test_b b on a.id=b.id
@@ -64,7 +67,6 @@ full join tmp.test_c c on nvl(a.id,b.id)=c.id;
 
 ---------------------------------------------------------------------------------------------- 
 -- 多张表的指标合并，缺失日期数据补全问题，只能一层一层full join，或者使用日期维度表拼接？？？
--- 错误演示
 drop table tmp.test_filldate_a;
 create table tmp.test_filldate_a (
     dt string,
@@ -89,7 +91,7 @@ select '2019-01-01' as dt,'B' as orgid,80 as amount union all
 select '2019-01-02' as dt,'A' as orgid,90 as amount union all
 select '2019-01-03' as dt,'A' as orgid,30 as amount;
 
-
+-- error
 select d.date_str,
        nvl(a.dt,b.dt) as dt,
        nvl(a.orgid,b.orgid) as orgid,
