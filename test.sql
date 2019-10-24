@@ -1,4 +1,4 @@
--- 分区测试
+---------------------------------------------------------------------------------------------- 分区测试
 drop table tmp.test_partitions;
 create table tmp.test_partitions (
     id int,
@@ -30,7 +30,7 @@ explain select * from tmp.test_partitions t where t.dt in ('2019-01-01','2019-01
 explain select * from tmp.test_partitions t where substr(t.dt,1,4)='2019';
 explain select * from tmp.test_partitions t where t.dt>='2019-01' and t.dt<'2019-02';
 
--- full join 3张表
+---------------------------------------------------------------------------------------------- full join 3张表
 drop table tmp.test_a;
 create table tmp.test_a (
     id int
@@ -62,7 +62,9 @@ from tmp.test_a a
 full join tmp.test_b b on a.id=b.id
 full join tmp.test_c c on nvl(a.id,b.id)=c.id;
 
+---------------------------------------------------------------------------------------------- 
 -- 多张表的指标合并，缺失日期数据补全问题，只能一层一层full join，或者使用日期维度表拼接？？？
+-- 错误演示
 drop table tmp.test_filldate_a;
 create table tmp.test_filldate_a (
     dt string,
