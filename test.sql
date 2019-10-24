@@ -61,3 +61,39 @@ select coalesce(a.id,b.id,c.id) as id,a.id as a_id,b.id as b_id,c.id as c_id
 from tmp.test_a a 
 full join tmp.test_b b on a.id=b.id
 full join tmp.test_c c on nvl(a.id,b.id)=c.id;
+
+-- 多张表的指标合并，缺失日期数据补全问题，只能一层一层full join，或者使用日期维度表拼接？？？
+drop table tmp.test_filldate_a;
+create table tmp.test_filldate_a (
+    dt string,
+    orgid string,
+    num int
+);
+insert overwrite table tmp.test_filldate_a
+select '2019-01-01' as dt,'A' as orgid,6 as num union all
+select '2019-01-01' as dt,'B' as orgid,8 as num union all
+select '2019-01-04' as dt,'A' as orgid,9 as num union all
+select '2019-01-05' as dt,'A' as orgid,3 as num;
+
+drop table tmp.test_filldate_b;
+create table tmp.test_filldate_b (
+    dt string,
+    orgid string,
+    amount double
+);
+insert overwrite table tmp.test_filldate_b
+select '2019-01-01' as dt,'A' as orgid,60 as amount union all
+select '2019-01-01' as dt,'B' as orgid,80 as amount union all
+select '2019-01-02' as dt,'A' as orgid,90 as amount union all
+select '2019-01-03' as dt,'A' as orgid,30 as amount;
+
+
+select d.date_str,
+       nvl(a.dt,b.dt) as dt,
+       nvl(a.orgid,b.orgid) as orgid,
+       a.num,
+       b.amount
+from medical.dim_date d
+left join tmp.test_filldate_a a on d.date_str=a.dt
+left join tmp.test_filldate_b b on d.date_str=b.dt
+where a.dt is not null or b.dt is not null;
