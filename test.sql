@@ -101,3 +101,18 @@ from medical.dim_date d
 left join tmp.test_filldate_a a on d.date_str=a.dt
 left join tmp.test_filldate_b b on d.date_str=b.dt
 where a.dt is not null or b.dt is not null;
+
+-- success
+with t as (
+-- 这个临时表可以落地，供其他指标表使用。这样可以去掉所有的full join，全是用left join即可，可以大大提高效率。
+select t.dt,t.orgid
+from (
+    select dt,orgid from tmp.test_filldate_a group by dt,orgid
+    union all
+    select dt,orgid from tmp.test_filldate_b group by dt,orgid
+    ) t
+group by t.dt,t.orgid
+)
+select t.dt,t.orgid,a.num,b.amount from t
+left join tmp.test_filldate_a a on t.dt=a.dt and t.orgid=a.orgid
+left join tmp.test_filldate_b b on t.dt=b.dt and t.orgid=b.orgid;
