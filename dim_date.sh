@@ -14,33 +14,36 @@ end_date=2030-12-31
 
 hive -v -e "
 create table if not exists medical.dim_date (
-    id                               int    comment 'ID',
-    date                             string comment '日期：2010-01-01',
-    date_num                         string comment '日期：20100101',
-    date_str                         string comment '日期：2010/01/01',
-    date_cn                          string comment '日期：2010年01月01日',
-    year_month                       string comment '年月：201001',
-    year_month_cn                    string comment '年月：2010年01月',
-    year                             int    comment '年份：2010',
-    month                            string comment '月份：01',
-    month_int                        int    comment '月份：1',
-    month_cn                         string comment '月份：01月',
-    month_en                         string comment '月份：January',
-    month_en_short                   string comment '月份：Jan',
-    quarter_int                      string comment '季度：1',
-    quarter_cn                       string comment '季度：2010年第一季度',
-    half_year                        string comment '半年：1、2分别代表上半年和下半年',
-    half_year_cn                     string comment '半年：2010年上半年、2010年下半年',
-    weekofyear                       int    comment '本周所在年的第几周。注意跨年问题，系统函数，会承接上年的周',
-    weekofmonth_cn                   string comment '本周所在月的第几周。注意跨月问题，不承接上月的周，不建议使用',
-    dayofyear                        int    comment '本天所在年的第几天',
-    dayofmonth                       int    comment '本天所在月的第几天',
-    dayofweek                        int    comment '本天所在周的第几天',
-    week_en                          string comment '周：Monday,Tuesday...',
-    week_en_short                    string comment '周：MON,TUE...',
-    week_cn                          string comment '周：星期一,星期二...星期日',
-    week_start_date                  string comment '本周开始日期',
-    week_end_date                    string comment '本周结束日期'
+    id                               int       comment 'ID',
+    date_str                         string    comment '日期：2010-01-01',
+    date_num                         string    comment '日期：20100101',
+    date_sep                         string    comment '日期：2010/01/01',
+    date_cn                          string    comment '日期：2010年01月01日',
+    date_dt                          timestamp comment '日期：2010-01-01 00:00:00',
+    yearmonth                        string    comment '年月：201001',
+    yearmonth_cn                     string    comment '年月：2010年01月',
+    year                             int       comment '年份：2010',
+    year_cn                          string    comment '年份：2010年',
+    month                            string    comment '月份：01',
+    month_int                        int       comment '月份：1',
+    month_cn                         string    comment '月份：01月',
+    month_en                         string    comment '月份：January',
+    month_en_short                   string    comment '月份：Jan',
+    quarter_int                      string    comment '季度：1',
+    quarter_cn                       string    comment '季度：2010年第一季度',
+    halfyear                         string    comment '半年：1、2分别代表上半年和下半年',
+    halfyear_cn                      string    comment '半年：2010年上半年、2010年下半年',
+    weekofyear                       int       comment '本周所在年的第几周。注意跨年问题，系统函数，会承接上年的周',
+    weekofyear_cn                    string    comment '本周所在年的第几周。注意跨年问题，系统函数，会承接上年的周。2010年第1周',
+    weekofmonth_cn                   string    comment '本周所在月的第几周。注意跨月问题，不承接上月的周，不建议使用',
+    dayofyear                        int       comment '本天所在年的第几天',
+    dayofmonth                       int       comment '本天所在月的第几天',
+    dayofweek                        int       comment '本天所在周的第几天',
+    week_en                          string    comment '周：Monday,Tuesday...',
+    week_en_short                    string    comment '周：MON,TUE...',
+    week_cn                          string    comment '周：星期一,星期二...星期日',
+    week_start_date                  string    comment '本周开始日期',
+    week_end_date                    string    comment '本周结束日期'
 ) 
 comment 'dim_时间维度表' 
 stored as parquet;
@@ -49,13 +52,15 @@ set hive.mapred.mode=nonstrict;
 
 insert overwrite table medical.dim_date
 select row_number() over(order by date) as id,
-       date,
+       date as date_str,
        regexp_replace(date,'-','') as date_num,
-       regexp_replace(date,'-','/') as date_str,
+       regexp_replace(date,'-','/') as date_sep,
        concat(substr(date,1,4),'年',substr(date,6,2),'月',substr(date,9,2),'日') as date_cn,
-       concat(substr(date,1,4),substr(date,6,2)) as year_month,
-       concat(substr(date,1,4),'年',substr(date,6,2),'月') as year_month_cn,
+       cast(date as timestamp) as date_dt,
+       concat(substr(date,1,4),substr(date,6,2)) as yearmonth,
+       concat(substr(date,1,4),'年',substr(date,6,2),'月') as yearmonth_cn,
        year(date) as year,
+       concat(year(date),'年') as year_cn,
        substr(date,6,2) as month,
        month(date) as month_int,
        concat(substr(date,6,2),'月') as month_cn,
@@ -97,11 +102,15 @@ select row_number() over(order by date) as id,
             end as quarter_cn,
        case when substr(date,6,2) >= '01' and substr(date,6,2) <= '06' then 1 
             when substr(date,6,2) >= '07' and substr(date,6,2) <= '12' then 2 
-            end as half_year,
+            end as halfyear,
        case when substr(date,6,2) >= '01' and substr(date,6,2) <= '06' then concat(substr(date,1,4),'年上半年') 
             when substr(date,6,2) >= '07' and substr(date,6,2) <= '12' then concat(substr(date,1,4),'年下半年') 
-            end as half_year_cn,
+            end as halfyear_cn,
        weekofyear(date) as weekofyear,
+       concat(case when substr(date,5,2)='01' and weekofyear(date)>=50 then cast(year(date)-1 as string)
+                   when substr(date,5,2)='12' and weekofyear(date)<=10 then cast(year(date)+1 as string)
+                   else cast(year(date) as string) end,
+             '年第',cast(weekofyear(date) as string),'周') weekofyear_cn,
        concat('第',floor(datediff(date,date_sub(concat(substr(date,1,7),'-01'),pmod(datediff(concat(substr(date,1,7),'-01'),'1900-01-01'),7)))/7)+1,'周') as weekofmonth_cn,
        datediff(date,concat(substr(date,1,4),'-01-01')) + 1 as dayofyear,
        dayofmonth(date) as dayofmonth,
@@ -195,5 +204,5 @@ select row_number() over(order by date) as id,
             ) e
        ) t
 where date>='$start_date' and date<='$end_date'
-order by date
+order by date_str
 "
