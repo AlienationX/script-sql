@@ -75,13 +75,13 @@ from parquet_nest t
 select t.name, 
        t.record_data.orgname, 
        t.record_data.visitdate, 
-       s.items['itemname'] as itemname,
-       s.items['unit'] as unit,
-       s.items['price'] as price,
-       s.items['qty'] as qty,
-       s.items['fee'] as fee
+       s.detail['itemname'] as itemname,
+       s.detail['unit'] as unit,
+       s.detail['price'] as price,
+       s.detail['qty'] as qty,
+       s.detail['fee'] as fee
 from parquet_nest t
-lateral view explode(t.record_data.items) s as items
+lateral view explode(t.record_data.items) s as detail
 ;
 
 --------------------------------------------------------------------------------------------------------
