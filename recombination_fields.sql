@@ -71,6 +71,19 @@ select t.*,
 from parquet_nest t
 ;
 
+-- 明细数据查询
+select t.name, 
+       t.record_data.orgname, 
+       t.record_data.visitdate, 
+       s.items['itemname'] as itemname,
+       s.items['unit'] as unit,
+       s.items['price'] as price,
+       s.items['qty'] as qty,
+       s.items['fee'] as fee
+from parquet_nest t
+lateral view explode(t.record_data.items) s as items
+;
+
 --------------------------------------------------------------------------------------------------------
 -- 订单 + 明细 的复杂组合
 drop table if exists parquet_nest_master_info;
