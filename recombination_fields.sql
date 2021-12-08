@@ -21,7 +21,7 @@ create table if not exists parquet_nest (
                             diseases:array<string>,
                             items:array<map<string, string>>,
                             total_fee:decimal(38,4)
-                        >                                  comment '记录数据，复合格式',  -- map只能做最深层的类型，因为map的多个key-value的类型必须一致，不能单独制定value的类型。可以使用struct代替
+                        >                                  comment '记录数据，复合格式',  -- map只能做最深层的类型，因为map的多个key-value的类型必须一致，不能单独指定value的类型。可以使用struct代替
     update_time         timestamp                          comment '更新时间'
 )
 stored as parquet;
