@@ -73,7 +73,7 @@ from parquet_nest t
 
 -- 明细数据查询
 select t.name, 
-       t.record_data.orgname, 
+       t.record_data.org, 
        t.record_data.visitdate, 
        s.detail['itemname'] as itemname,
        s.detail['unit'] as unit,
